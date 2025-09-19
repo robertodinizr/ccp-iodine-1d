@@ -7,7 +7,6 @@ namespace spark {
 
 struct Parameters {
     size_t nx;
-    size_t ny;
     double f;
     double dt;
     double lx;

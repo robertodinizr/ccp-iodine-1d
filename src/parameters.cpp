@@ -8,16 +8,14 @@ void Parameters::fixed_parameters() {
     ti = 300.0; // ion temperature (K)
     m_i = 126.90447 * 1.66053906892e-27; // ion mass (kg)
     m_e = 9.109e-31; // electron mass (kg)
-    lx = 30e-3; // horizontal length (cm)
+    lx = 6.7e-2; // horizontal length (cm)
     f = 13.56e6; // frequency (Hz)
 }
 
 void Parameters::computed_parameters() {
     dx = lx / static_cast<double>(nx - 1);
-    dy = dx;
-    ly = dy * static_cast<double>(ny - 1);
-    particle_weight = (n0 * lx * ly) / static_cast<double>(ppc * (nx - 1) * (ny - 1));
-    n_initial = (nx - 1) * (ny - 1) * ppc;
+    particle_weight = (n0 * lx) / static_cast<double>(ppc * (nx - 1));
+    n_initial = (nx - 1 )* ppc;
 }
 
 Parameters Parameters::case_1() {
@@ -25,7 +23,6 @@ Parameters Parameters::case_1() {
     p.fixed_parameters();
 
     p.nx = 129; // number of horizontal cells
-    p.ny = 4; // number of vertical cells
     p.dt = 1.0 / (400.0 * p.f); // time step (s)
     p.ni = 7.397e19; // neutral density (m^-3)
     p.ni2 = 4.128e19; // I2 neutral density (m^-3)
@@ -44,7 +41,6 @@ Parameters Parameters::case_2() {
     p.fixed_parameters();
 
     p.nx = 257;
-    p.ny = 4;
     p.dt = 1.0 / (800.0 * p.f);
     p.ni = 32.1e20;
     p.n0 = 5.12e14;
@@ -62,7 +58,6 @@ Parameters Parameters::case_3() {
     p.fixed_parameters();
 
     p.nx = 513;
-    p.ny = 4;
     p.dt = 1.0 / (1600.0 * p.f);
     p.ni = 96.4e20;
     p.n0 = 5.12e14;
@@ -80,7 +75,6 @@ Parameters Parameters::case_4() {
     p.fixed_parameters();
 
     p.nx = 513;
-    p.ny = 4;
     p.dt = 1.0 / (3200.0 * p.f);
     p.ni = 321.0e20;
     p.n0 = 3.84e14;

@@ -8,26 +8,20 @@
 #include <iostream>
 
 namespace {
-    void save_vec(const char* filename, const std::vector<double>& vec, size_t nx, size_t ny) {
+    void save_vec(const char* filename, const std::vector<double>& vec, size_t nx) {
         std::ofstream out_file(filename);
         out_file << std::scientific << std::setprecision(6);
-        for (size_t i = 0; i < nx; ++i) {
-            for (size_t j = 0; j < ny; ++j) {
-                out_file << vec[i * ny + j];
-                if (j < ny - 1) {
-                    out_file << " ";
-                }
-            }
-            out_file << "\n";
+        for (size_t i = 0; i < nx && i < vec.size(); ++i) {
+            out_file << vec[i] << "\n";
         }
     }
 
-    std::vector<double> count_to_density(double particle_weight, double dx, double dy,
-        const spark::core::TMatrix<double, 2>& count) {
+    std::vector<double> count_to_density(double particle_weight, double dx,
+        const spark::core::TMatrix<double, 1>& count) {
         auto d = std::vector<double>(count.size().mul());
         std::ranges::transform(count.data().begin(), count.data().end(), d.begin(),
-            [particle_weight, dx, dy](const double val) {
-                return val * particle_weight / (dx * dy);
+            [particle_weight, dx](const double val) {
+                return val * particle_weight / (dx);
             });
         return d;
     }
@@ -87,17 +81,21 @@ void setup_events(Simulation& simulation) {
     simulation.events().add_action<PrintEvolutionAction>(Simulation::Event::Step);
 
     struct AverageFieldAction : public Simulation::EventAction {
-        spark::spatial::AverageGrid<2> av_electron_density;
-        spark::spatial::AverageGrid<2> av_ion_density;
-        spark::spatial::AverageGrid<2> av_ion_i2_density;
-        spark::spatial::AverageGrid<2> av_ion_im_density;
+        spark::spatial::AverageGrid<1> av_electron_density;
+        spark::spatial::AverageGrid<1> av_ion_density;
+        spark::spatial::AverageGrid<1> av_ion_i2_density;
+        spark::spatial::AverageGrid<1> av_ion_im_density;
 
         Parameters parameters_;
         explicit AverageFieldAction(const Parameters& parameters) : parameters_(parameters) {
-            av_electron_density = spark::spatial::AverageGrid<2>({{parameters_.lx, parameters_.ly}, {parameters_.nx, parameters_.ny}});
-            av_ion_density = spark::spatial::AverageGrid<2>({{parameters_.lx, parameters_.ly}, {parameters_.nx, parameters_.ny}});
-            av_ion_i2_density = spark::spatial::AverageGrid<2>({{parameters_.lx, parameters_.ly}, {parameters_.nx, parameters_.ny}});
-            av_ion_im_density = spark::spatial::AverageGrid<2>({{parameters_.lx, parameters_.ly}, {parameters_.nx, parameters_.ny}});
+            spark::core::Vec<1> l{parameters_.lx};
+            spark::core::ULongVec<1> n{parameters_.nx};
+            spark::spatial::UniformGrid<1> grid(l, n);
+
+            av_electron_density = spark::spatial::AverageGrid<1>(grid);
+            av_ion_density = spark::spatial::AverageGrid<1>(grid);
+            av_ion_i2_density = spark::spatial::AverageGrid<1>(grid);
+            av_ion_im_density = spark::spatial::AverageGrid<1>(grid);
         }
         void notify(const Simulation::StateInterface& s) override {
             if (s.step() > parameters_.n_steps - parameters_.n_steps_avg) {
@@ -125,14 +123,14 @@ void setup_events(Simulation& simulation) {
                 const auto& avg_i = avg_field_action_ptr->av_ion_density.get();
                 const auto& avg_i2 = avg_field_action_ptr->av_ion_i2_density.get();
                 const auto& avg_im = avg_field_action_ptr->av_ion_im_density.get();
-                auto density_e = count_to_density(parameters_.particle_weight, parameters_.dx, parameters_.dy, avg_e);
-                auto density_i = count_to_density(parameters_.particle_weight, parameters_.dx, parameters_.dy, avg_i);
-                auto density_i2 = count_to_density(parameters_.particle_weight, parameters_.dx, parameters_.dy, avg_i2);
-                auto density_im = count_to_density(parameters_.particle_weight, parameters_.dx, parameters_.dy, avg_im);
-                save_vec("density_e.txt", density_e, parameters_.nx, parameters_.ny);
-                save_vec("density_i.txt", density_i, parameters_.nx, parameters_.ny);
-                save_vec("density_i2.txt", density_i2, parameters_.nx, parameters_.ny);
-                save_vec("density_im.txt", density_im, parameters_.nx, parameters_.ny);
+                auto density_e = count_to_density(parameters_.particle_weight, parameters_.dx, avg_e);
+                auto density_i = count_to_density(parameters_.particle_weight, parameters_.dx, avg_i);
+                auto density_i2 = count_to_density(parameters_.particle_weight, parameters_.dx, avg_i2);
+                auto density_im = count_to_density(parameters_.particle_weight, parameters_.dx, avg_im);
+                save_vec("density_e.txt", density_e, parameters_.nx);
+                save_vec("density_i.txt", density_i, parameters_.nx);
+                save_vec("density_i2.txt", density_i2, parameters_.nx);
+                save_vec("density_im.txt", density_im, parameters_.nx);
             }
         }
     };
@@ -143,8 +141,8 @@ void setup_events(Simulation& simulation) {
         explicit SaveGridInfoAction(const Parameters& parameters) : parameters_(parameters) {}
         void notify(const Simulation::StateInterface&) override {
             std::ofstream out_file("grid_info.txt");
-            out_file << parameters_.lx << " " << parameters_.ly << "\n";
-            out_file << parameters_.nx << " " << parameters_.ny << "\n";
+            out_file << parameters_.lx << " " << "\n";
+            out_file << parameters_.nx << " " << "\n";
         }
     };
     simulation.events().add_action(Simulation::Event::End, SaveGridInfoAction(simulation.state().parameters()));
@@ -153,16 +151,15 @@ void setup_events(Simulation& simulation) {
         Parameters parameters_;
         explicit SaveFieldDataAction(const Parameters& parameters) : parameters_(parameters) {}
         void notify(const Simulation::StateInterface& s) override {
-            save_vec("phi_field.txt", s.phi_field().data().data(), parameters_.nx, parameters_.ny);
+            save_vec("phi_field.txt", s.phi_field().data().data(), parameters_.nx);
             const auto& E_field = s.electric_field().data();
-            std::vector<double> E_x(parameters_.nx * parameters_.ny);
-            std::vector<double> E_y(parameters_.nx * parameters_.ny);
-            for (size_t i = 0; i < parameters_.nx * parameters_.ny; i++) {
+            std::vector<double> E_x(parameters_.nx);
+            std::vector<double> E_y(parameters_.nx);
+            for (size_t i = 0; i < parameters_.nx; i++) {
                 E_x[i] = E_field.data()[i].x;
-                E_y[i] = E_field.data()[i].y;
             }
-            save_vec("electric_field_x.txt", E_x, parameters_.nx, parameters_.ny);
-            save_vec("electric_field_y.txt", E_y, parameters_.nx, parameters_.ny);
+            save_vec("electric_field_x.txt", E_x, parameters_.nx);
+            save_vec("electric_field_y.txt", E_y, parameters_.nx);
         }
     };
     simulation.events().add_action(Simulation::Event::End, SaveFieldDataAction(simulation.state().parameters()));
