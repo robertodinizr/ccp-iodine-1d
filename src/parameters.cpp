@@ -42,7 +42,8 @@ Parameters Parameters::case_2() {
 
     p.nx = 257;
     p.dt = 1.0 / (800.0 * p.f);
-    p.ni = 32.1e20;
+    p.ni = 25e19; // neutral density (m^-3)
+    p.ni2 = 13e19; // I2 neutral density (m^-3)
     p.n0 = 5.12e14;
     p.volt = 200.0;
     p.ppc = 256;
@@ -59,7 +60,8 @@ Parameters Parameters::case_3() {
 
     p.nx = 513;
     p.dt = 1.0 / (1600.0 * p.f);
-    p.ni = 96.4e20;
+    p.ni = 75e19; // neutral density (m^-3)
+    p.ni2 = 39e19; // I2 neutral density (m^-3)
     p.n0 = 5.12e14;
     p.volt = 150.0;
     p.ppc = 128;
@@ -76,7 +78,8 @@ Parameters Parameters::case_4() {
 
     p.nx = 513;
     p.dt = 1.0 / (3200.0 * p.f);
-    p.ni = 321.0e20;
+    p.ni = 225e19; // neutral density (m^-3)
+    p.ni2 = 117e19; // I2 neutral density (m^-3)
     p.n0 = 3.84e14;
     p.volt = 120.0;
     p.ppc = 64;
